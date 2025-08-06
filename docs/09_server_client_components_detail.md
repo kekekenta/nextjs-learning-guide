@@ -421,6 +421,172 @@ import { analyzeData } from 'data-analysis-lib'; // 300KB
 import { useState } from 'react'; // 必要最小限
 ```
 
+## 7. Suspenseとクライアントコンポーネントの使い分け
+
+### Suspenseとは
+- **Reactの機能**で、非同期コンポーネントの読み込み中にフォールバックUIを表示
+- **サーバーコンポーネントでもクライアントコンポーネントでも使用可能**
+- データフェッチングやコンポーネントの遅延読み込みの待機状態を管理
+
+### クライアントコンポーネントとは
+- `'use client'`宣言で指定されるコンポーネント
+- **ブラウザで実行される**
+- useState、useEffect、onClickなどのインタラクティブ機能が使える
+
+### 使い分けの基準
+
+#### Suspenseを使う場面
+- **データフェッチングを含むサーバーコンポーネントをラップ**
+- ページの一部を段階的に表示したい時（Streaming）
+- 重いコンポーネントの遅延読み込み
+
+```typescript
+// サーバーコンポーネントでのデータフェッチング
+export default function Page() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      {/* データ取得中はLoadingを表示 */}
+      <Suspense fallback={<Loading />}>
+        <SlowDataComponent /> {/* DBアクセスなど時間がかかる処理 */}
+      </Suspense>
+    </div>
+  );
+}
+
+async function SlowDataComponent() {
+  // サーバー側でデータ取得
+  const data = await fetchDataFromDB();
+  return <DataDisplay data={data} />;
+}
+```
+
+#### クライアントコンポーネントを使う場面
+- **ユーザーインタラクション**（クリック、入力、ホバー）
+- **ブラウザAPI使用**（localStorage、window、document）
+- **状態管理**（useState、useReducer）
+- **リアルタイム更新**、WebSocket接続
+
+```typescript
+'use client';
+export function InteractiveForm() {
+  const [value, setValue] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  
+  const handleSubmit = () => {
+    // ブラウザで実行される処理
+    localStorage.setItem('formData', value);
+    setSubmitted(true);
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input onChange={(e) => setValue(e.target.value)} />
+      <button type="submit">送信</button>
+    </form>
+  );
+}
+```
+
+### 実践的な組み合わせパターン
+
+```typescript
+// app/dashboard/page.tsx
+export default function Dashboard() {
+  return (
+    <div>
+      {/* 1. 静的部分：即座に表示 */}
+      <Header />
+      <Navigation />
+      
+      {/* 2. 非同期データ：Suspenseで段階表示 */}
+      <div className="grid grid-cols-2">
+        <Suspense fallback={<ChartSkeleton />}>
+          <SalesChart /> {/* サーバーでデータ取得 */}
+        </Suspense>
+        
+        <Suspense fallback={<TableSkeleton />}>
+          <UserTable /> {/* サーバーでデータ取得 */}
+        </Suspense>
+      </div>
+      
+      {/* 3. インタラクティブ部分：クライアントコンポーネント */}
+      <FilterPanel /> {/* 'use client' でユーザー操作 */}
+    </div>
+  );
+}
+
+// サーバーコンポーネント（データ取得）
+async function SalesChart() {
+  const salesData = await fetchSalesData();
+  return (
+    <div>
+      <h2>売上データ</h2>
+      {/* データを表示 */}
+      <ChartDisplay data={salesData} />
+      {/* インタラクティブな機能を追加 */}
+      <ChartInteractions initialData={salesData} />
+    </div>
+  );
+}
+
+// クライアントコンポーネント（インタラクション）
+'use client';
+function ChartInteractions({ initialData }) {
+  const [range, setRange] = useState('week');
+  
+  return (
+    <div>
+      <button onClick={() => setRange('day')}>日別</button>
+      <button onClick={() => setRange('week')}>週別</button>
+      <button onClick={() => setRange('month')}>月別</button>
+    </div>
+  );
+}
+```
+
+### 判断フローチャート
+
+```
+データ取得が必要？
+  ├─ Yes → Suspenseでラップ
+  │         └─ ユーザー操作も必要？
+  │              ├─ Yes → Suspense内にクライアントコンポーネント配置
+  │              └─ No → サーバーコンポーネントのみ
+  └─ No → ユーザー操作が必要？
+           ├─ Yes → クライアントコンポーネント
+           └─ No → 通常のサーバーコンポーネント
+```
+
+### よくある間違い
+
+```typescript
+// ❌ 間違い：クライアントコンポーネントで直接async/await
+'use client';
+async function WrongComponent() { // エラー！
+  const data = await fetchData();
+  return <div>{data}</div>;
+}
+
+// ✅ 正解：useEffectまたはサーバーコンポーネントを使用
+'use client';
+function CorrectComponent() {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    fetchData().then(setData);
+  }, []);
+  
+  return <div>{data}</div>;
+}
+
+// ✅ または、サーバーコンポーネントでデータ取得
+async function ServerComponent() {
+  const data = await fetchData();
+  return <ClientComponent initialData={data} />;
+}
+```
+
 ## 🎯 重要なポイント
 
 | 側面 | サーバーコンポーネント | クライアントコンポーネント |
