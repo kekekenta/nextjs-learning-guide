@@ -123,6 +123,11 @@ Rails/React/MySQL経験者向けのNext.js/Prisma/PostgreSQL完全学習ガイ�
     - DDD/Vertical Slice Architecture
     - スケーリング戦略
 
+21. **[Webサーバーアーキテクチャ](./docs/21_nextjs_web_server_architecture.md)**
+    - Rails Puma vs Next.js Node.js
+    - ワーカープロセスとスレッドモデル
+    - 本番環境のスケーリング戦略
+
 ### 実践プロジェクト
 
 10. **[実践プロジェクト](./docs/10_practice_project.md)**
@@ -217,6 +222,7 @@ npm run dev
 | 18_client_server_auth.md | 認証パターン詳解 | 30分 |
 | 19_nextjs_directory_structure.md | ディレクトリ設計 | 30分 |
 | 20_nextauth_table_structure.md | NextAuthテーブル構造 | 30分 |
+| 21_nextjs_web_server_architecture.md | Webサーバーアーキテクチャ | 45分 |
 
 ## 🤝 コントリビューション
 
